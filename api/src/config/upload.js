@@ -2,9 +2,15 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadDir = path.join(__dirname, '../../uploads/menu');
+// Use /tmp for uploads on Vercel (read-only fs)
+const uploadDir = process.env.VERCEL ? '/tmp/uploads/menu' : path.join(__dirname, '../../uploads/menu');
+
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+    try {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    } catch (err) {
+        console.warn(`Could not create upload directory: ${uploadDir}. Uploads may fail.`);
+    }
 }
 
 const storage = multer.diskStorage({

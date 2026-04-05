@@ -19,15 +19,6 @@ const logger = winston.createLogger({
         new winston.transports.Console({
             format: combine(colorize(), logFormat),
         }),
-        // Log errors to a dedicated file
-        new winston.transports.File({ 
-            filename: path.join(__dirname, '../../logs/error.log'), 
-            level: 'error' 
-        }),
-        // Log all standard data to another file
-        new winston.transports.File({ 
-            filename: path.join(__dirname, '../../logs/combined.log') 
-        }),
     ],
 });
 
