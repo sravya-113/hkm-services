@@ -1,0 +1,156 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Higher Taste Branding Theme - Maroon & Gray */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 333 63% 15%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 333 63% 15%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 333 63% 15%;
+
+  /* Logo Maroon: #7D1D4D approx */
+  --primary: 330 63% 30%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 333 63% 15%;
+
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+
+  --accent: 0 0% 96%;
+  --accent-foreground: 330 63% 30%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 330 63% 30%;
+
+  --radius: 0.5rem;
+
+  --chart-1: 330 63% 30%;
+  --chart-2: 0 0% 50%;
+  --chart-3: 330 63% 45%;
+  --chart-4: 0 0% 70%;
+  --chart-5: 330 63% 60%;
+
+  --sidebar: 333 63% 10%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 330 63% 30%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 333 63% 15%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 333 63% 15%;
+  --sidebar-ring: 330 63% 30%;
+}
+
+.dark {
+  --background: 333 63% 5%;
+  --foreground: 0 0% 98%;
+
+  --card: 333 63% 5%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 333 63% 5%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 330 63% 45%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 333 63% 15%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 333 63% 15%;
+  --muted-foreground: 0 0% 65%;
+
+  --accent: 333 63% 15%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 333 63% 15%;
+  --input: 333 63% 15%;
+  --ring: 330 63% 45%;
+
+  --sidebar: 333 63% 5%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 330 63% 45%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 333 63% 15%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 333 63% 15%;
+  --sidebar-ring: 330 63% 45%;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
