@@ -11,6 +11,7 @@ const normalizeSignupPayload = (userData: any) => ({
   email: userData?.email ?? userData?.username ?? "",
   password: userData?.password,
   role: userData?.role,
+  phone: userData?.phone,
 });
 
 const extractAuthPayload = (data: any) => ({

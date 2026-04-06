@@ -1,6 +1,8 @@
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { sendWhatsAppMessage } = require('../services/whatsappService');
+const logger = require('../utils/logger');
 
 
 const generateToken = (userId) => {
@@ -40,7 +42,7 @@ const register = async (req, res) => {
         });
     }
 
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone } = req.body;
 
     try {
         // Check if user already exists
@@ -53,11 +55,28 @@ const register = async (req, res) => {
         }
 
        
-        const user = await User.create({ name, email, password, role });
+        const user = await User.create({ name, email, password, role, phone });
+
+        // 🔥 Send WhatsApp Welcome Message (Non-blocking)
+        if (phone) {
+            const welcomeMsg = `Welcome to HighTaste, ${name}! 🎉 Your account has been created successfully.`;
+            sendWhatsAppMessage({ phone, message: welcomeMsg })
+                .then(() => logger.info(`[WhatsApp] Welcome message sent to ${phone}`))
+                .catch((wsErr) => logger.error(`[WhatsApp] Welcome message failed: ${wsErr.message}`));
+        }
 
         sendTokenResponse(user, 201, res, 'Account created successfully.');
     } catch (error) {
-        console.error('Register Error:', error.message);
+        console.error('Register Error:', error);
+        
+        // Distinguish validation errors
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                success: false,
+                message: Object.values(error.errors).map(val => val.message).join(', '),
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Server error. Please try again.',

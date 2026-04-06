@@ -31,6 +31,7 @@ const SignupPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("staff");
+  const [phone, setPhone] = useState("");
   const [signup, { isLoading: isSignupLoading }] = useSignupMutation();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -49,11 +50,12 @@ const SignupPage: React.FC = () => {
 
     try {
       await signup({ 
-        username: email, // Using email as username
+        username: email, 
         name, 
         email, 
         password, 
-        role 
+        role,
+        phone 
       }).unwrap();
 
       toast.success("Account created successfully! You can now log in.");
@@ -220,6 +222,21 @@ const SignupPage: React.FC = () => {
                       />
                     </div>
                   </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone" className="text-xs font-semibold text-foreground/70 tracking-wide uppercase">WhatsApp Number</Label>
+                      <div className="relative group">
+                        <Input 
+                          id="phone" 
+                          type="tel" 
+                          placeholder="8247806856" 
+                          className="h-11 bg-white border-muted focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-xl text-sm pl-4"
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                    </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">

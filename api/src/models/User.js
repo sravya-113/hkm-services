@@ -27,6 +27,18 @@ const UserSchema = new mongoose.Schema(
             enum: ['admin', 'staff', 'viewer'],
             default: 'staff',
         },
+        phone: {
+            type: String,
+            trim: true,
+            required: false,
+            validate: {
+                validator: function(v) {
+                    // Only validate regex if a value is provided
+                    return !v || /^[0-9]{10,15}$/.test(v.replace(/[\s\-\(\)\+]/g, ''));
+                },
+                message: 'Please enter a valid phone number (10-15 digits)'
+            }
+        },
         isActive: {
             type: Boolean,
             default: true,

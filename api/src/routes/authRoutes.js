@@ -8,7 +8,7 @@ const router = express.Router();
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50, // Relaxed limit – 50 requests per windowMs for auth
+    max: 200, // Increased limit for testing and high-traffic periods
     message: {
         success: false,
         message: 'Too many requests from this IP, please try again after 15 minutes.'
@@ -29,6 +29,10 @@ const registerValidation = [
     body('password')
         .notEmpty().withMessage('Password is required')
         .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+    body('phone')
+        .optional({ checkFalsy: true })
+        .trim()
+        .isLength({ min: 10, max: 15 }).withMessage('Phone number must be between 10 and 15 digits'),
     body('role')
         .optional()
         .isIn(['admin', 'staff', 'viewer']).withMessage('Role must be admin, staff, or viewer'),
