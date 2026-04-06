@@ -30,8 +30,8 @@ export const authApi = api.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           dispatch(setCredentials(extractAuthPayload(data)));
-        } catch (err) {
-          console.error("Login mutation failed:", err);
+        } catch (err: any) {
+          console.error("Login mutation failed:", err.data?.message || err.message || err);
         }
       },
     }),
@@ -45,8 +45,8 @@ export const authApi = api.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           dispatch(setCredentials(extractAuthPayload(data)));
-        } catch (err) {
-          console.error("Signup mutation failed:", err);
+        } catch (err: any) {
+          console.error("Signup mutation failed:", err.data?.message || err.message || err);
         }
       },
     }),

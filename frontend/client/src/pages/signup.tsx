@@ -29,13 +29,22 @@ const SignupPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("staff");
   const [signup, { isLoading: isSignupLoading }] = useSignupMutation();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !confirmPassword) {
       return toast.error("Please fill in all required fields");
+    }
+
+    if (password !== confirmPassword) {
+      return toast.error("Passwords do not match");
+    }
+
+    if (password.length < 8) {
+      return toast.error("Password must be at least 8 characters");
     }
 
     try {
@@ -249,6 +258,8 @@ const SignupPage: React.FC = () => {
                         id="confirm" 
                         type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                         className="h-11 bg-white border-muted focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-xl text-sm"
                         required
                       />

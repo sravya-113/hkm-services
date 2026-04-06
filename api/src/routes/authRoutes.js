@@ -8,8 +8,13 @@ const router = express.Router();
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // Limit each IP to 10 requests per windowMs for auth routes
-    message: 'Too many requests from this IP, please try again after 15 minutes',
+    max: 50, // Relaxed limit – 50 requests per windowMs for auth
+    message: {
+        success: false,
+        message: 'Too many requests from this IP, please try again after 15 minutes.'
+    },
+    standardHeaders: true, // Return rate limit info in headers
+    legacyHeaders: false, // Disable X-RateLimit headers
 });
 const registerValidation = [
     body('name')
@@ -23,7 +28,7 @@ const registerValidation = [
         .normalizeEmail(),
     body('password')
         .notEmpty().withMessage('Password is required')
-        .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     body('role')
         .optional()
         .isIn(['admin', 'staff', 'viewer']).withMessage('Role must be admin, staff, or viewer'),
