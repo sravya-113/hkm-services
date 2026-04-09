@@ -19,7 +19,7 @@ const UserSchema = new mongoose.Schema(
         password: {
             type: String,
             required: [true, 'Password is required'],
-            minlength: [8, 'Password must be at least 8 characters'],
+            minlength: [5, 'Password must be at least 5 characters'],
             select: false, // Never return password in queries by default
         },
         role: {
@@ -33,8 +33,10 @@ const UserSchema = new mongoose.Schema(
             required: false,
             validate: {
                 validator: function(v) {
-                    // Only validate regex if a value is provided
-                    return !v || /^[0-9]{10,15}$/.test(v.replace(/[\s\-\(\)\+]/g, ''));
+                    // Only validate if phone has a length after cleaning
+                    if (!v) return true;
+                    const clean = String(v).replace(/[\s\-\(\)\+]/g, '');
+                    return clean.length >= 10 && clean.length <= 15 && /^[0-9]+$/.test(clean);
                 },
                 message: 'Please enter a valid phone number (10-15 digits)'
             }

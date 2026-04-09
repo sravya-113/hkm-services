@@ -6,6 +6,7 @@ const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+/*
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 200, // Increased limit for testing and high-traffic periods
@@ -16,6 +17,8 @@ const authLimiter = rateLimit({
     standardHeaders: true, // Return rate limit info in headers
     legacyHeaders: false, // Disable X-RateLimit headers
 });
+*/
+
 const registerValidation = [
     body('name')
         .trim()
@@ -27,11 +30,13 @@ const registerValidation = [
         .isEmail().withMessage('Please provide a valid email address')
         .normalizeEmail(),
     body('password')
+        .trim()
         .notEmpty().withMessage('Password is required')
-        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+        .isLength({ min: 5 }).withMessage('Password must be at least 5 characters'),
     body('phone')
         .optional({ checkFalsy: true })
         .trim()
+        .isNumeric().withMessage('Phone number must contain only digits')
         .isLength({ min: 10, max: 15 }).withMessage('Phone number must be between 10 and 15 digits'),
     body('role')
         .optional()
@@ -47,14 +52,8 @@ const loginValidation = [
     body('password')
         .notEmpty().withMessage('Password is required'),
 ];
-// @POST /api/auth/register 
-router.post('/register', authLimiter, registerValidation, register);
-
-// @POST /api/auth/signup (alias for legacy clients)
-router.post('/signup', authLimiter, registerValidation, register);
-
 // @POST /api/auth/login 
-router.post('/login', authLimiter, loginValidation, login);
+router.post('/login', loginValidation, login);
 
 // @POST /api/auth/logout  
 router.post('/logout', protect, logout);

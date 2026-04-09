@@ -31,96 +31,73 @@ const sendTokenResponse = (user, statusCode, res, message) => {
 };
 
 
-const register = async (req, res) => {
-    
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors: errors.array(),
-        });
-    }
+const bcrypt = require('bcryptjs');
 
-    const { name, email, password, role, phone } = req.body;
-
-    try {
-        // Check if user already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: 'User already exists with this email.',
-            });
-        }
-
-       
-        const user = await User.create({ name, email, password, role, phone });
-
-        // 🔥 Send WhatsApp Welcome Message (Non-blocking)
-        if (phone) {
-            const welcomeMsg = `Welcome to HighTaste, ${name}! 🎉 Your account has been created successfully.`;
-            sendWhatsAppMessage({ phone, message: welcomeMsg })
-                .then(() => logger.info(`[WhatsApp] Welcome message sent to ${phone}`))
-                .catch((wsErr) => logger.error(`[WhatsApp] Welcome message failed: ${wsErr.message}`));
-        }
-
-        sendTokenResponse(user, 201, res, 'Account created successfully.');
-    } catch (error) {
-        console.error('Register Error:', error);
-        
-        // Distinguish validation errors
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                message: Object.values(error.errors).map(val => val.message).join(', '),
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            message: 'Server error. Please try again.',
-        });
-    }
-};
-
-
+/**
+ * @desc    Login user (Admin only)
+ * @route   POST /api/auth/login
+ * @access  Public
+ */
 const login = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            success: false,
-            message: 'Validation failed',
-            errors: errors.array(),
-        });
-    }
-
     const { email, password } = req.body;
 
-    try {
-        // Find user and explicitly include password (select: false in schema)
-        const user = await User.findOne({ email }).select('+password');
+    // 1. Enforce Admin Email Only
+    const adminEmail = process.env.ADMIN_EMAIL || 'mukunda@hkmvizag.org';
+    if (email.toLowerCase() !== adminEmail.toLowerCase()) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. Only the administrator can log in.',
+        });
+    }
 
+    try {
+        // 2. Resolve Admin from DB (to keep IDs and Roles consistent across the app)
+        let user = await User.findOne({ email: adminEmail }).select('+password');
+
+        // If admin doesn't exist in DB yet, bootstrap them (initial login)
         if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password.',
-            });
+            // Check against ADMIN_PASSWORD_HASH if provided, else we can't bootstrap
+            // For first-time setup, we allow login if password matches the hash in ENV
+            const adminHash = process.env.ADMIN_PASSWORD_HASH;
+            
+            if (adminHash) {
+                const isMatch = await bcrypt.compare(password, adminHash);
+                if (isMatch) {
+                    // Create the admin user in the database so the rest of the app works
+                    user = await User.create({
+                        name: 'Administrator',
+                        email: adminEmail,
+                        password: password, // Will be hashed by User model pre-save hook
+                        role: 'admin',
+                        isActive: true
+                    });
+                } else {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Invalid credentials.',
+                    });
+                }
+            } else {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Admin account not found and bootstrap credentials missing.',
+                });
+            }
+        } else {
+            // Normal password check against DB
+            const isMatch = await user.matchPassword(password);
+            if (!isMatch) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid credentials.',
+                });
+            }
         }
 
         if (!user.isActive) {
             return res.status(401).json({
                 success: false,
-                message: 'Account is deactivated. Contact an administrator.',
-            });
-        }
-
-        // Compare entered password with hashed password
-        const isMatch = await user.matchPassword(password);
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password.',
+                message: 'Admin account is deactivated.',
             });
         }
 

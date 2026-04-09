@@ -155,8 +155,41 @@ const sendReceiptWhatsapp = async (phone, filePath, donorName, amount, paymentTy
     return await sendWhatsAppMessage({ phone, templateName, components, filePath });
 };
 
+/**
+ * Utility to send a templated message (No attachment)
+ */
+const sendTemplatedMessage = async (phone, templateName, components = []) => {
+    return await sendWhatsAppMessage({ phone, templateName, components });
+};
+
+/**
+ * Utility to send an invoice with PDF attachment using a template
+ */
+const sendInvoiceWhatsApp = async (phone, filePath, customerName, invoiceNumber) => {
+    const components = [
+        {
+            type: "body",
+            parameters: [
+                { type: "text", text: customerName },
+                { type: "text", text: invoiceNumber }
+            ]
+        }
+    ];
+    // This template must be registered in Flaxxa
+    const templateName = "invoice_notification"; 
+    
+    return await sendWhatsAppMessage({ 
+        phone, 
+        templateName, 
+        components, 
+        filePath 
+    });
+};
+
 module.exports = {
     sendWhatsAppMessage,
+    sendTemplatedMessage,
+    sendInvoiceWhatsApp,
     sendOrderConfirmation,
     sendPaymentLinkTemplate,
     sendStatusUpdate,

@@ -6,14 +6,6 @@ const normalizeLoginPayload = (credentials: any) => ({
   password: credentials?.password ?? "",
 });
 
-const normalizeSignupPayload = (userData: any) => ({
-  name: userData?.name,
-  email: userData?.email ?? userData?.username ?? "",
-  password: userData?.password,
-  role: userData?.role,
-  phone: userData?.phone,
-});
-
 const extractAuthPayload = (data: any) => ({
   token: data?.token,
   user: data?.user,
@@ -36,21 +28,6 @@ export const authApi = api.injectEndpoints({
         }
       },
     }),
-    signup: builder.mutation({
-      query: (userData) => ({
-        url: "/auth/register",
-        method: "POST",
-        body: normalizeSignupPayload(userData),
-      }),
-      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(setCredentials(extractAuthPayload(data)));
-        } catch (err: any) {
-          console.error("Signup mutation failed:", err.data?.message || err.message || err);
-        }
-      },
-    }),
     status: builder.query({
       query: () => "/auth/me",
     }),
@@ -63,5 +40,5 @@ export const authApi = api.injectEndpoints({
   }),
 });
 
-export const { useLoginMutation, useSignupMutation, useStatusQuery, useLogoutMutation } = authApi;
+export const { useLoginMutation, useStatusQuery, useLogoutMutation } = authApi;
 

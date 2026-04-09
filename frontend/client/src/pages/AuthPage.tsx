@@ -176,57 +176,17 @@ const AuthPage: React.FC = () => {
                   >
                     <div className="mb-8">
                       <h3 className="text-2xl font-bold text-foreground mb-2">
-                        {isLogin ? "Welcome Back" : "Create Account"}
+                        Welcome Back
                       </h3>
                       <p className="text-muted-foreground">
-                        {isLogin 
-                          ? "Please enter your credentials to access your account." 
-                          : "Fill in your details to set up your team profile."}
+                        Please enter your administrator credentials to access the hub.
                       </p>
                     </div>
 
                     <form onSubmit={handleAuth} className="space-y-4">
-                      {!isLogin && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="name" className="text-xs font-semibold text-foreground/70 tracking-wide uppercase">Full Name</Label>
-                            <div className="relative group">
-                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
-                                <UserIcon size={16} />
-                              </div>
-                              <Input 
-                                id="name" 
-                                placeholder="Arjun Das" 
-                                className="pl-9 h-11 bg-white border-muted focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-xl text-sm"
-                                required={!isLogin}
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="role" className="text-xs font-semibold text-foreground/70 tracking-wide uppercase">Organization Role</Label>
-                            <Select 
-                              defaultValue="staff" 
-                              value={role} 
-                              onValueChange={(val: User['role']) => setRole(val)}
-                            >
-                              <SelectTrigger className="h-11 bg-white border-muted focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-xl text-sm pl-3">
-                                <SelectValue placeholder="Select role" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-xl border-muted shadow-xl">
-                                <SelectItem value="admin">Administrator</SelectItem>
-                                <SelectItem value="staff">Operational Staff</SelectItem>
-                                <SelectItem value="viewer">Viewer/Client</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-
                       <div className="space-y-1.5">
                         <Label htmlFor="email" className="text-xs font-semibold text-foreground/70 tracking-wide uppercase">
-                          {isLogin ? "Email Address" : "Company Email"}
+                          Email Address
                         </Label>
                         <div className="relative group">
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
@@ -235,7 +195,7 @@ const AuthPage: React.FC = () => {
                           <Input 
                             id="email" 
                             type="email" 
-                            placeholder="arjun@highertaste.com" 
+                            placeholder="mukunda@hkmvizag.org" 
                             className="pl-9 h-11 bg-white border-muted focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-xl text-sm"
                             required
                             value={email}
@@ -247,11 +207,6 @@ const AuthPage: React.FC = () => {
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <Label htmlFor="password" className="text-xs font-semibold text-foreground/70 tracking-wide uppercase">Password</Label>
-                          {isLogin && (
-                            <button type="button" className="text-xs text-primary font-semibold hover:underline">
-                              Forgot?
-                            </button>
-                          )}
                         </div>
                         <div className="relative group">
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
@@ -285,30 +240,17 @@ const AuthPage: React.FC = () => {
                           {isLoading ? (
                             <div className="flex items-center gap-2">
                               <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              {isLogin ? "Signing in..." : "Creating..."}
+                              Signing in...
                             </div>
                           ) : (
                             <div className="flex items-center justify-center gap-2">
-                              {isLogin ? "Login to Dashboard" : "Start Using Higher Taste"}
+                              Login to Dashboard
                               <ArrowRight size={18} />
                             </div>
                           )}
                         </Button>
                       </div>
                     </form>
-
-                    <div className="mt-8 pt-6 border-t border-muted text-center">
-                      <p className="text-muted-foreground text-sm">
-                        {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-                        <button 
-                          onClick={() => setIsLogin(!isLogin)}
-                          className="text-primary font-bold hover:underline inline-flex items-center gap-1 group"
-                        >
-                          {isLogin ? "Sign up now" : "Log in here"}
-                          <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                        </button>
-                      </p>
-                    </div>
                   </motion.div>
                 </AnimatePresence>
               </div>

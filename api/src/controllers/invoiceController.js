@@ -3,7 +3,11 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const generateNumber = require('../utils/generateNumber');
 const { generateInvoicePDF } = require('../services/pdfService');
+const { sendInvoiceWhatsApp } = require('../services/whatsappService');
 const { createError } = require('../middleware/errorHandler');
+const fs = require('fs').promises;
+const path = require('path');
+const logger = require('../utils/logger');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // @desc    Get all invoices (with filters)
@@ -279,11 +283,58 @@ const bulkExport = async (req, res, next) => {
 // @access  Private
 // ─────────────────────────────────────────────────────────────────────────────
 const sendInvoice = async (req, res, next) => {
+    let tempFilePath = null;
     try {
-        // TODO: Implement sending invoice using whatsappService or email based on user preference
-        res.json({ success: true, message: 'Send invoice feature coming soon!' });
+        const invoice = await Invoice.findById(req.params.id)
+            .populate('orderId', 'orderNumber eventName')
+            .populate('customerId', 'name company phone email gstin address');
+
+        if (!invoice) return next(createError(404, 'Invoice not found'));
+        if (!invoice.customerId?.phone) {
+            return res.status(400).json({ success: false, message: 'Customer has no phone number registered' });
+        }
+
+        // 1. Generate PDF Buffer
+        const pdfBuffer = await generateInvoicePDF(invoice, invoice.customerId);
+
+        // 2. Save Buffer to Temporary File
+        const uploadsDir = path.join(__dirname, '../../uploads');
+        // Ensure directory exists
+        const fsNormal = require('fs');
+        if (!fsNormal.existsSync(uploadsDir)) fsNormal.mkdirSync(uploadsDir, { recursive: true });
+
+        const fileName = `Invoice_${invoice.invoiceNumber}.pdf`;
+        tempFilePath = path.join(uploadsDir, fileName);
+        await fs.writeFile(tempFilePath, pdfBuffer);
+
+        // 3. Send via WhatsApp Template
+        logger.info(`Sending WhatsApp invoice ${invoice.invoiceNumber} to ${invoice.customerId.phone}`);
+        const result = await sendInvoiceWhatsApp(
+            invoice.customerId.phone,
+            tempFilePath,
+            invoice.customerId.name,
+            invoice.invoiceNumber
+        );
+
+        if (result.success || result.status === 'success') {
+            res.json({ success: true, message: `Invoice sent successfully to ${invoice.customerId.name}` });
+        } else {
+            logger.error('WhatsApp invoice sending failed:', result);
+            res.status(500).json({ success: false, message: 'WhatsApp provider error', detail: result });
+        }
     } catch (err) {
+        logger.error('Send Invoice Error:', err);
         next(err);
+    } finally {
+        // 4. Cleanup (Delete temp file)
+        if (tempFilePath) {
+            const fsNormal = require('fs');
+            if (fsNormal.existsSync(tempFilePath)) {
+                fsNormal.unlink(tempFilePath, (err) => {
+                    if (err) logger.error(`Failed to delete temp file ${tempFilePath}:`, err);
+                });
+            }
+        }
     }
 };
 
