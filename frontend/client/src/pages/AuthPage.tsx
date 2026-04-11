@@ -18,42 +18,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useLoginMutation, useSignupMutation } from "@/store/authApi";
+import { useLoginMutation, useForgotPasswordMutation } from "@/store/authApi";
 import { User } from "@/store/authSlice";
 import logoImg from "@assets/HIgher_taste_logo_1771483400145.png";
 import { toast } from "sonner";
 
 const AuthPage: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [, setLocation] = useLocation();
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
-  const [signup, { isLoading: isSignupLoading }] = useSignupMutation();
-  
   // Form States
+  const [showPassword, setShowPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<User['role']>("staff");
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return toast.error("Credentials required");
 
     try {
-      if (isLogin) {
-        await login({ email, password }).unwrap();
-        toast.success("Welcome back!");
-      } else {
-        await signup({ 
-          email, 
-          password, 
-          name: name || email.split('@')[0], 
-          role 
-        }).unwrap();
-        toast.success("Account created successfully!");
-        setIsLogin(true); // Switch to login after signup
-      }
+      await login({ email, password }).unwrap();
+      toast.success("Welcome back!");
       setLocation("/");
     } catch (err: any) {
       console.error("Auth error:", err);
@@ -61,7 +46,7 @@ const AuthPage: React.FC = () => {
     }
   };
 
-  const isLoading = isLoginLoading || isSignupLoading;
+  const isLoading = isLoginLoading;
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#f8f9fa] relative overflow-hidden font-sans">
@@ -97,7 +82,6 @@ const AuthPage: React.FC = () => {
                   </div>
                   
                   <AnimatePresence mode="wait">
-                    {isLogin ? (
                       <motion.div
                         key="login-text"
                         initial={{ opacity: 0, x: -20 }}
@@ -112,39 +96,6 @@ const AuthPage: React.FC = () => {
                           Streamline your catering processes, manage orders, and deliver exceptional service with our centralized management system.
                         </p>
                       </motion.div>
-                    ) : (
-                      <motion.div
-                        key="signup-text"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <h2 className="text-3xl font-bold text-white mb-6 leading-tight">
-                          Join Our Operational Excellence
-                        </h2>
-                        <div className="space-y-6">
-                          <div className="flex items-start gap-4">
-                            <div className="h-10 w-10 min-w-10 rounded-lg bg-white/10 flex items-center justify-center text-white border border-white/10">
-                              <ShieldCheck size={22} />
-                            </div>
-                            <div>
-                              <h4 className="text-white font-bold text-base">Secure & Centralized</h4>
-                              <p className="text-white/70 text-sm">Enterprise-grade security for your operations and catering data.</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-4">
-                            <div className="h-10 w-10 min-w-10 rounded-lg bg-white/10 flex items-center justify-center text-white border border-white/10">
-                              <Briefcase size={22} />
-                            </div>
-                            <div>
-                              <h4 className="text-white font-bold text-base">End-to-End Workflow</h4>
-                              <p className="text-white/70 text-sm">Managing every step from quotes to dispatch and billing.</p>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
                   </AnimatePresence>
                 </div>
 
@@ -168,7 +119,7 @@ const AuthPage: React.FC = () => {
 
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={isLogin ? "login" : "signup"}
+                    key="login"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
@@ -183,7 +134,7 @@ const AuthPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <form onSubmit={handleAuth} className="space-y-4">
+                    <form onSubmit={handleLogin} className="space-y-4">
                       <div className="space-y-1.5">
                         <Label htmlFor="email" className="text-xs font-semibold text-foreground/70 tracking-wide uppercase">
                           Email Address

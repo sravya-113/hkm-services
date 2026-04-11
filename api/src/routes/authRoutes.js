@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const rateLimit = require('express-rate-limit');
-const { register, login, logout, getMe } = require('../controllers/authController');
+const { login, logout, getMe, forgotPassword } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -19,29 +19,7 @@ const authLimiter = rateLimit({
 });
 */
 
-const registerValidation = [
-    body('name')
-        .trim()
-        .notEmpty().withMessage('Name is required')
-        .isLength({ max: 100 }).withMessage('Name cannot exceed 100 characters'),
-    body('email')
-        .trim()
-        .notEmpty().withMessage('Email is required')
-        .isEmail().withMessage('Please provide a valid email address')
-        .normalizeEmail(),
-    body('password')
-        .trim()
-        .notEmpty().withMessage('Password is required')
-        .isLength({ min: 5 }).withMessage('Password must be at least 5 characters'),
-    body('phone')
-        .optional({ checkFalsy: true })
-        .trim()
-        .isNumeric().withMessage('Phone number must contain only digits')
-        .isLength({ min: 10, max: 15 }).withMessage('Phone number must be between 10 and 15 digits'),
-    body('role')
-        .optional()
-        .isIn(['admin', 'staff', 'viewer']).withMessage('Role must be admin, staff, or viewer'),
-];
+
 
 const loginValidation = [
     body('email')
@@ -57,6 +35,7 @@ router.post('/login', loginValidation, login);
 
 // @POST /api/auth/logout  
 router.post('/logout', protect, logout);
+
 
 // @GET  /api/auth/me  
 router.get('/me', protect, getMe);

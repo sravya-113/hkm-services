@@ -3,6 +3,11 @@ import {
   useGetSettingsQuery,
   useUpdateSettingsMutation,
 } from "@/store/settingsApi";
+import {
+  useGetUsersQuery,
+  useCreateUserMutation,
+  useDeleteUserMutation,
+} from "@/store/userApi";
 import type { SettingsData } from "@/store/settingsApi";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -32,6 +37,9 @@ import {
   MessageSquare,
   Eye,
   EyeOff,
+  Users,
+  UserPlus,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -39,8 +47,16 @@ import { cn } from "@/lib/utils";
 export default function Settings() {
   const { data: res, isLoading } = useGetSettingsQuery();
   const [updateSettings, { isLoading: isSaving }] = useUpdateSettingsMutation();
+  const { data: usersRes } = useGetUsersQuery();
+  const [createUser, { isLoading: isCreatingUser }] = useCreateUserMutation();
+  const [deleteUser] = useDeleteUserMutation();
 
   const settings = res?.data;
+  const users = usersRes?.data || [];
+
+  // Manage Users form
+  const [userModal, setUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "staff" });
 
   // Branding form
   const [branding, setBranding] = useState({
@@ -126,6 +142,36 @@ export default function Settings() {
       toast.success("Notification preference updated");
     } catch {
       toast.error("Failed to update");
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    try {
+      await createUser(newUser).unwrap();
+      toast.success("User created successfully");
+      setUserModal(false);
+      setNewUser({ name: "", email: "", password: "", role: "staff" });
+    } catch (err: any) {
+      toast.error(err.data?.message || "Failed to create user");
+    }
+  };
+
+  const handleDeleteUser = async (id: string, role: string) => {
+    if (role === 'admin') {
+       toast.error("Cannot delete admin users from here");
+       return;
+    }
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      try {
+        await deleteUser(id).unwrap();
+        toast.success("User deleted");
+      } catch {
+        toast.error("Failed to delete user");
+      }
     }
   };
 
@@ -254,6 +300,43 @@ export default function Settings() {
                 Configure
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* ─── Manage Users ─── */}
+        <Card className="border border-slate-100 rounded-xl shadow-sm bg-white">
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-[#5a141e]">
+                <div className="p-1.5 bg-[#5a141e]/10 rounded-lg">
+                  <Users className="h-4 w-4 text-[#5a141e]" />
+                </div>
+                Manage Users
+              </CardTitle>
+              <CardDescription className="text-slate-400 text-xs font-medium">Add or remove staff and team members from the operations hub.</CardDescription>
+            </div>
+            <Button onClick={() => setUserModal(true)} size="sm" className="bg-[#5a141e] hover:bg-[#4a1018] text-white">
+              <UserPlus className="h-4 w-4 mr-2" /> Add User
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {users.length === 0 ? (
+              <div className="text-sm text-slate-500 py-4 text-center">No users available</div>
+            ) : (
+              users.map((u: any) => (
+                <div key={u.id || u._id} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50">
+                  <div>
+                    <p className="font-semibold text-sm text-slate-800">{u.name} <Badge variant="secondary" className="ml-2 text-[10px]">{u.role}</Badge></p>
+                    <p className="text-xs text-slate-500">{u.email}</p>
+                  </div>
+                  {u.role !== 'admin' && (
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(u.id || u._id, u.role)} className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -389,6 +472,68 @@ export default function Settings() {
             <Button className="bg-[#5a141e] hover:bg-[#4a1018] text-white font-bold" onClick={handleSaveWhatsapp} disabled={isSaving}>
               {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               Save Configuration
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Add User Modal ─── */}
+      <Dialog open={userModal} onOpenChange={setUserModal}>
+        <DialogContent className="sm:max-w-[480px] border-none shadow-2xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-[#5a141e] flex items-center gap-2">
+              <UserPlus className="h-5 w-5" /> Add New User
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">Provide an email and password for the new staff member so they can log in.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Name</Label>
+              <Input
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                placeholder="e.g. Rahul Kumar"
+                className="h-10 bg-slate-50 border-slate-200 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Email Address</Label>
+              <Input
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                placeholder="rahul@hkmvizag.org"
+                className="h-10 bg-slate-50 border-slate-200 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Initial Password</Label>
+              <Input
+                type="text"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                placeholder="Set a default password"
+                className="h-10 bg-slate-50 border-slate-200 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Role</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-slate-50 px-3 py-2 text-sm ring-offset-background"
+                value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+              >
+                <option value="staff">Staff</option>
+                <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserModal(false)} className="font-bold">Cancel</Button>
+            <Button className="bg-[#5a141e] hover:bg-[#4a1018] text-white font-bold" onClick={handleCreateUser} disabled={isCreatingUser}>
+              {isCreatingUser ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Create User
             </Button>
           </DialogFooter>
         </DialogContent>

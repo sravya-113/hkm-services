@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 const logger = require('../utils/logger');
 
@@ -34,109 +35,84 @@ const sendTokenResponse = (user, statusCode, res, message) => {
 const bcrypt = require('bcryptjs');
 
 /**
- * @desc    Login user (Admin only)
+ * @desc    Login user (Allows Admin & Users)
  * @route   POST /api/auth/login
  * @access  Public
  */
 const login = async (req, res) => {
     const { email, password } = req.body;
+    const adminEmail = (process.env.ADMIN_EMAIL || 'mukunda@hkmvizag.org').toLowerCase();
+    const adminHash = process.env.ADMIN_PASSWORD_HASH;
 
-    // 1. Enforce Admin Email Only
-    const adminEmail = process.env.ADMIN_EMAIL || 'mukunda@hkmvizag.org';
-    if (email.toLowerCase() !== adminEmail.toLowerCase()) {
-        return res.status(403).json({
-            success: false,
-            message: 'Access denied. Only the administrator can log in.',
-        });
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Email and password required.' });
+    }
+
+    if (email.toLowerCase() !== adminEmail) {
+        return res.status(401).json({ success: false, message: 'Access denied. Unauthorized email.' });
     }
 
     try {
-        // 2. Resolve Admin from DB (to keep IDs and Roles consistent across the app)
-        let user = await User.findOne({ email: adminEmail }).select('+password');
-
-        // If admin doesn't exist in DB yet, bootstrap them (initial login)
-        if (!user) {
-            // Check against ADMIN_PASSWORD_HASH if provided, else we can't bootstrap
-            // For first-time setup, we allow login if password matches the hash in ENV
-            const adminHash = process.env.ADMIN_PASSWORD_HASH;
-            
-            if (adminHash) {
-                const isMatch = await bcrypt.compare(password, adminHash);
-                if (isMatch) {
-                    // Create the admin user in the database so the rest of the app works
-                    user = await User.create({
-                        name: 'Administrator',
-                        email: adminEmail,
-                        password: password, // Will be hashed by User model pre-save hook
-                        role: 'admin',
-                        isActive: true
-                    });
-                } else {
-                    return res.status(401).json({
-                        success: false,
-                        message: 'Invalid credentials.',
-                    });
-                }
-            } else {
-                return res.status(500).json({
-                    success: false,
-                    message: 'Admin account not found and bootstrap credentials missing.',
-                });
-            }
-        } else {
-            // Normal password check against DB
-            const isMatch = await user.matchPassword(password);
-            if (!isMatch) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid credentials.',
-                });
-            }
+        // Compare with environment hash
+        const isMatch = await bcrypt.compare(password, adminHash);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials. Password mismatch.' });
         }
 
-        if (!user.isActive) {
-            return res.status(401).json({
-                success: false,
-                message: 'Admin account is deactivated.',
+        // Ensure Admin exists in Database for record relations (e.g. createdBy fields)
+        let user = await User.findOne({ email: adminEmail });
+        
+        if (!user) {
+            user = await User.create({
+                name: 'Administrator',
+                email: adminEmail,
+                password: 'SYSTEM_ADMIN_ACCOUNT', // Not used for login
+                role: 'admin',
+                isActive: true
             });
         }
 
-        sendTokenResponse(user, 200, res, 'Login successful.');
+        sendTokenResponse(user, 200, res, 'Login successful. Welcome, Admin.');
     } catch (error) {
         console.error('Login Error:', error.message);
-        res.status(500).json({
-            success: false,
-            message: 'Server error. Please try again.',
-        });
+        res.status(500).json({ success: false, message: 'Server error during authentication.' });
     }
 };
-
 
 const logout = async (req, res) => {
     res.status(200).json({
         success: true,
-        message: `Goodbye, ${req.user.name}! You have been logged out successfully.`,
+        message: `Goodbye, Admin! You have been logged out successfully.`,
         token: null,
     });
 };
 
-
 const getMe = async (req, res) => {
-    
-    const user = await User.findById(req.user.id);
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    res.status(200).json({
-        success: true,
-        user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            isActive: user.isActive,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-        },
+        res.status(200).json({
+            success: true,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                createdAt: user.createdAt,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+const forgotPassword = async (req, res) => {
+    res.status(403).json({
+        success: false,
+        message: 'Password recovery is disabled for the admin account. Please check your environment configuration.',
     });
 };
 
-module.exports = { register, login, logout, getMe };
+module.exports = { login, logout, getMe, forgotPassword };

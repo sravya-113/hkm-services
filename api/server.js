@@ -38,6 +38,7 @@ app.use(express.urlencoded({ extended: true }));
 // ─── Import Routes ─────────────────────────────────────────────────────────
 const authRoutes = require('./src/routes/authRoutes');
 const customerRoutes = require('./src/routes/customerRoutes');
+const userRoutes = require('./src/routes/userRoutes');
 const menuRoutes = require('./src/routes/menuRoutes');       // Step 3
 const quoteRoutes = require('./src/routes/quoteRoutes');     // Step 4
 const orderRoutes = require('./src/routes/orderRoutes');      // Step 5
@@ -79,6 +80,7 @@ app.get('/', (req, res) => {
 // ─── Mount Routes ─────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/menu', menuRoutes);       // Step 3
 app.use('/api/quotes', quoteRoutes);    // Step 4
 app.use('/api/orders', orderRoutes);    // Step 5
