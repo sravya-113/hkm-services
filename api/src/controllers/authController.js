@@ -1,21 +1,21 @@
 const { validationResult } = require('express-validator');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
+const User   = require('../models/User');
 const bcrypt = require('bcryptjs');
-const { sendWhatsAppMessage } = require('../services/whatsappService');
+const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
 
-const generateToken = (userId) => {
-    return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const generateToken = (userId) =>
+    jwt.sign({ id: userId }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN || process.env.JWT_EXPIRE || '7d',
     });
-};
-
 
 const sendTokenResponse = (user, statusCode, res, message) => {
     const token = generateToken(user._id);
-
     res.status(statusCode).json({
         success: true,
         message,
@@ -31,44 +31,47 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     });
 };
 
+const createMailTransporter = () =>
+    nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,   // Gmail App Password (16 chars)
+        },
+    });
 
-const bcrypt = require('bcryptjs');
+
+// ─── Controllers ─────────────────────────────────────────────────────────────
 
 /**
- * @desc    Login user (Allows Admin & Users)
+ * @desc    Login (admin only — checked against env hash)
  * @route   POST /api/auth/login
  * @access  Public
  */
 const login = async (req, res) => {
     const { email, password } = req.body;
     const adminEmail = (process.env.ADMIN_EMAIL || 'mukunda@hkmvizag.org').toLowerCase();
-    const adminHash = process.env.ADMIN_PASSWORD_HASH;
+    const adminHash  = process.env.ADMIN_PASSWORD_HASH;
 
-    if (!email || !password) {
+    if (!email || !password)
         return res.status(400).json({ success: false, message: 'Email and password required.' });
-    }
 
-    if (email.toLowerCase() !== adminEmail) {
+    if (email.toLowerCase() !== adminEmail)
         return res.status(401).json({ success: false, message: 'Access denied. Unauthorized email.' });
-    }
 
     try {
-        // Compare with environment hash
         const isMatch = await bcrypt.compare(password, adminHash);
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials. Password mismatch.' });
-        }
+        if (!isMatch)
+            return res.status(401).json({ success: false, message: 'Invalid credentials.' });
 
-        // Ensure Admin exists in Database for record relations (e.g. createdBy fields)
         let user = await User.findOne({ email: adminEmail });
-        
         if (!user) {
             user = await User.create({
                 name: 'Administrator',
                 email: adminEmail,
-                password: 'SYSTEM_ADMIN_ACCOUNT', // Not used for login
+                password: 'SYSTEM_ADMIN_ACCOUNT',
                 role: 'admin',
-                isActive: true
+                isActive: true,
             });
         }
 
@@ -79,18 +82,25 @@ const login = async (req, res) => {
     }
 };
 
-const logout = async (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: `Goodbye, Admin! You have been logged out successfully.`,
-        token: null,
-    });
+/**
+ * @desc    Logout
+ * @route   POST /api/auth/logout
+ * @access  Private
+ */
+const logout = async (_req, res) => {
+    res.status(200).json({ success: true, message: 'Logged out successfully.', token: null });
 };
 
+/**
+ * @desc    Get current user
+ * @route   GET /api/auth/me
+ * @access  Private
+ */
 const getMe = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (!user)
+            return res.status(404).json({ success: false, message: 'User not found' });
 
         res.status(200).json({
             success: true,
@@ -108,11 +118,164 @@ const getMe = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Request password reset — generates token and emails reset link
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ *
+ * Security: Always return the same generic response whether the email
+ * matches or not (prevents email enumeration).
+ */
 const forgotPassword = async (req, res) => {
-    res.status(403).json({
-        success: false,
-        message: 'Password recovery is disabled for the admin account. Please check your environment configuration.',
-    });
+    const { email } = req.body;
+    const adminEmail    = (process.env.ADMIN_EMAIL || 'mukunda@hkmvizag.org').toLowerCase();
+    const recoveryEmail = process.env.RECOVERY_EMAIL || 'prabhavathigudipati5@gmail.com';
+
+    // Generic response used for BOTH found & not-found cases
+    const genericOk = () =>
+        res.status(200).json({
+            success: true,
+            message: `If that email is registered, a reset link has been sent to ${recoveryEmail}.`,
+        });
+
+    if (!email || typeof email !== 'string')
+        return res.status(400).json({ success: false, message: 'Email is required.' });
+
+    // Only process for the admin email — but never leak "not found"
+    if (email.toLowerCase() !== adminEmail) return genericOk();
+
+    try {
+        const user = await User.findOne({ email: adminEmail });
+        if (!user) return genericOk();
+
+        // Generate a cryptographically secure random token
+        const rawToken    = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+        // Store hashed token with 15-minute expiry
+        user.resetPasswordToken   = hashedToken;
+        user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+        await user.save({ validateBeforeSave: false });
+
+        // Build the frontend reset link
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const resetUrl    = `${frontendUrl}/reset-password/${rawToken}`;
+
+        // Send email
+        const transporter = createMailTransporter();
+        await transporter.sendMail({
+            from: `"Higher Taste Admin" <${process.env.EMAIL_USER}>`,
+            to: recoveryEmail,
+            subject: 'Reset Your Password — Higher Taste Ops Hub',
+            html: `
+                <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f8f9fa;border-radius:12px;">
+                    <div style="text-align:center;margin-bottom:24px;">
+                        <h1 style="color:#5a141e;font-size:22px;margin:0;">Higher Taste</h1>
+                        <p style="color:#888;margin:4px 0 0;font-size:13px;">Catering Ops Hub</p>
+                    </div>
+                    <div style="background:#fff;border-radius:10px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                        <h2 style="color:#1a1a1a;font-size:18px;margin-top:0;">Reset Your Password</h2>
+                        <p style="color:#555;line-height:1.7;font-size:14px;">
+                            Hello,<br/><br/>
+                            Click the button below to reset your password for the admin account
+                            <strong style="color:#5a141e;">${adminEmail}</strong>.
+                        </p>
+                        <div style="text-align:center;margin:28px 0;">
+                            <a href="${resetUrl}"
+                               style="background:#5a141e;color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block;">
+                                Reset Password
+                            </a>
+                        </div>
+                        <p style="color:#888;font-size:13px;line-height:1.6;">
+                            ⏰ This link expires in <strong>15 minutes</strong>.<br/>
+                            If you didn't request this, you can safely ignore this email — your password won't change.
+                        </p>
+                        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;"/>
+                        <p style="color:#bbb;font-size:12px;margin:0;">
+                            Or copy this link into your browser:<br/>
+                            <a href="${resetUrl}" style="color:#5a141e;word-break:break-all;">${resetUrl}</a>
+                        </p>
+                    </div>
+                </div>
+            `,
+        });
+
+        logger.info(`Password reset email sent to ${recoveryEmail}`);
+        return genericOk();
+    } catch (error) {
+        logger.error('Forgot Password Error:', error.message);
+
+        // Clean up token so user can retry
+        try {
+            const user = await User.findOne({ email: adminEmail });
+            if (user) {
+                user.resetPasswordToken   = undefined;
+                user.resetPasswordExpires = undefined;
+                await user.save({ validateBeforeSave: false });
+            }
+        } catch (_) { /* ignore */ }
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send reset email. Please check email configuration in .env.',
+        });
+    }
 };
 
-module.exports = { login, logout, getMe, forgotPassword };
+/**
+ * @desc    Reset password using the token from the email link
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ *
+ * Body: { token: string, newPassword: string }
+ */
+const resetPassword = async (req, res) => {
+    const { token: rawToken, newPassword } = req.body;
+
+    if (!rawToken || !newPassword)
+        return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+
+    if (newPassword.length < 6)
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+
+    try {
+        // Hash the raw token to match what is stored in DB
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+        // Find user with a valid (unexpired) token
+        const user = await User.findOne({
+            resetPasswordToken:   hashedToken,
+            resetPasswordExpires: { $gt: Date.now() },
+        }).select('+resetPasswordToken +resetPasswordExpires');
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired token. Please request a new reset link.',
+            });
+        }
+
+        // Hash new password and update ADMIN_PASSWORD_HASH so current server process
+        // can authenticate the new password immediately
+        const salt    = await bcrypt.genSalt(12);
+        const newHash = await bcrypt.hash(newPassword, salt);
+        process.env.ADMIN_PASSWORD_HASH = newHash;
+
+        // Update user record password (pre-save hook will hash again, so store the
+        // raw value — the hook detects isModified)
+        user.password             = newPassword;  // hook will hash this
+        user.resetPasswordToken   = undefined;    // one-time use: clear immediately
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset successfully. You can now log in with your new password.',
+        });
+    } catch (error) {
+        logger.error('Reset Password Error:', error.message);
+        res.status(500).json({ success: false, message: 'Server error during password reset.' });
+    }
+};
+
+module.exports = { login, logout, getMe, forgotPassword, resetPassword };

@@ -24,6 +24,9 @@ import './kitchenApi';
 import './dashboardApi';
 import './settingsApi';
 import './calendarApi';
+import './userApi';
+import './feedbackApi';
+import './notificationApi';
 
 import menuReducer from './menuSlice';
 import expenseReducer from './expenseSlice';

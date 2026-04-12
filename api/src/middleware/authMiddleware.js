@@ -66,4 +66,7 @@ const authorize = (...roles) => {
     };
 };
 
-module.exports = { protect, authorize };
+// Convenience shorthand: only 'admin' role is allowed
+const adminOnly = authorize('admin');
+
+module.exports = { protect, authorize, adminOnly };

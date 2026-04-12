@@ -13,6 +13,7 @@ const extractAuthPayload = (data: any) => ({
 
 export const authApi = api.injectEndpoints({
   endpoints: (builder) => ({
+    // ── Existing ─────────────────────────────────────────────────────────────
     login: builder.mutation({
       query: (credentials) => ({
         url: "/auth/login",
@@ -31,8 +32,44 @@ export const authApi = api.injectEndpoints({
     status: builder.query({
       query: () => "/auth/me",
     }),
+    logout: builder.mutation({
+      query: () => ({
+        url: "/auth/logout",
+        method: "POST",
+      }),
+    }),
+
+    // ── Forgot / Reset Password ───────────────────────────────────────────────
+    /** POST /api/auth/forgot-password  — sends reset email */
+    forgotPassword: builder.mutation<
+      { success: boolean; message: string },
+      { email: string }
+    >({
+      query: (body) => ({
+        url: "/auth/forgot-password",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    /** POST /api/auth/reset-password  — validates token + sets new password */
+    resetPassword: builder.mutation<
+      { success: boolean; message: string },
+      { token: string; newPassword: string }
+    >({
+      query: (body) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
-export const { useLoginMutation, useStatusQuery, useLogoutMutation } = authApi;
-
+export const {
+  useLoginMutation,
+  useStatusQuery,
+  useLogoutMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+} = authApi;

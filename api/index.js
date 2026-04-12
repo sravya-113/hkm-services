@@ -34,6 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 // ─── Import Routes ─────────────────────────────────────────────────────────
 const authRoutes = require('./src/routes/authRoutes');
 const customerRoutes = require('./src/routes/customerRoutes');
+const userRoutes = require('./src/routes/userRoutes');
 const menuRoutes = require('./src/routes/menuRoutes');
 const quoteRoutes = require('./src/routes/quoteRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
@@ -61,6 +62,7 @@ app.get('/api', (req, res) => {
 // Note: These paths should match the incoming requests after Vercel routing
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/orders', orderRoutes);

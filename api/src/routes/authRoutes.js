@@ -1,26 +1,11 @@
 const express = require('express');
 const { body } = require('express-validator');
-const rateLimit = require('express-rate-limit');
-const { login, logout, getMe, forgotPassword } = require('../controllers/authController');
+const { login, logout, getMe, forgotPassword, resetPassword } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-/*
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // Increased limit for testing and high-traffic periods
-    message: {
-        success: false,
-        message: 'Too many requests from this IP, please try again after 15 minutes.'
-    },
-    standardHeaders: true, // Return rate limit info in headers
-    legacyHeaders: false, // Disable X-RateLimit headers
-});
-*/
-
-
-
+// Validation for login
 const loginValidation = [
     body('email')
         .trim()
@@ -30,17 +15,25 @@ const loginValidation = [
     body('password')
         .notEmpty().withMessage('Password is required'),
 ];
-// @POST /api/auth/login 
+
+// ── Auth Routes ───────────────────────────────────────────────────────────────
+
+// POST /api/auth/login
 router.post('/login', loginValidation, login);
 
-// @POST /api/auth/logout  
+// POST /api/auth/logout
 router.post('/logout', protect, logout);
 
-
-// @GET  /api/auth/me  
+// GET /api/auth/me
 router.get('/me', protect, getMe);
 
-// @GET  /api/auth/status (alias for legacy clients)
+// GET /api/auth/status  (alias)
 router.get('/status', protect, getMe);
+
+// POST /api/auth/forgot-password  — body: { email }
+router.post('/forgot-password', forgotPassword);
+
+// POST /api/auth/reset-password   — body: { token, newPassword }
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

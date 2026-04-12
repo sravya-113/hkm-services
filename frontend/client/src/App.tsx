@@ -23,6 +23,8 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import FeedbackPage from "@/pages/feedback";
 import AuthPage from "@/pages/AuthPage";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/layout";
 
@@ -30,6 +32,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password/:token" component={ResetPasswordPage} />
       
       {/* Protected Routes (Wrapped in Layout) */}
       <Route>
